@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,9 +13,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { CATEGORIES, CATEGORY_MAP } from '../constants/categories';
 import { Reminder, CategoryId } from '../types';
-import { loadReminders, deleteReminder } from '../storage/reminderStorage';
-import { cancelReminderNotifications } from '../utils/notifications';
-import { daysUntil } from '../utils/urgency';
+import { loadReminders, deleteReminder, updateReminder } from '../storage/reminderStorage';
+import { cancelReminderNotifications, scheduleReminderNotifications } from '../utils/notifications';
+import { daysUntil, nextDueDate } from '../utils/urgency';
 import ReminderCard from '../components/ReminderCard';
 
 type Group = { label: string; color: string; items: Reminder[] };
@@ -65,6 +64,23 @@ export default function RemindersScreen() {
 
   const handleEdit = (reminder: Reminder) => {
     navigation.navigate('Add', { reminder });
+  };
+
+  const handleMarkPaid = async (reminder: Reminder) => {
+    if (reminder.repeat === 'once') {
+      await cancelReminderNotifications(reminder.notificationIds);
+      const updated = await deleteReminder(reminder.id);
+      updated.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+      setReminders(updated);
+    } else {
+      const newDueDate = nextDueDate(reminder.dueDate, reminder.repeat);
+      await cancelReminderNotifications(reminder.notificationIds);
+      const advanced = { ...reminder, dueDate: newDueDate };
+      const newIds = await scheduleReminderNotifications(advanced);
+      const all = await updateReminder({ ...advanced, notificationIds: newIds });
+      all.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+      setReminders(all);
+    }
   };
 
   const usedCategoryIds = [...new Set(reminders.map(r => r.category))];
@@ -125,6 +141,7 @@ export default function RemindersScreen() {
                   reminder={r}
                   onDelete={handleDelete}
                   onEdit={handleEdit}
+                  onMarkPaid={handleMarkPaid}
                 />
               ))}
             </View>

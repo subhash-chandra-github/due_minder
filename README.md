@@ -2,7 +2,21 @@
 
 > Your personal recurring payment & renewal reminder app — India-first, privacy-first.
 
+DueMinder is a mobile productivity app that helps individuals and small businesses stay on top of recurring payments, subscriptions, and renewals — so nothing slips through the cracks.
+
+Users add due dates for bills, insurance, memberships, or any time-sensitive obligation. The app automatically sends local push notifications in advance, color-codes items by urgency, and organizes everything by category — all without an account, internet connection, or subscription fee.
+
+Key value props:
+
+Never miss a payment or renewal deadline
+Works fully offline — no data leaves the device
+Instant setup with no login required
+Visual urgency system (overdue → urgent → soon → upcoming) for at-a-glance prioritization
+Target users: Anyone managing recurring personal or business expenses — freelancers, households, small business owners — who want a lightweight, private alternative to calendar reminders or spreadsheets.
+
 **This app only sets reminders. It does not track actual payments.**
+
+
 
 ---
 
@@ -31,7 +45,7 @@
 ## Project Structure
 
 ```
-DueMinder/
+due_minder/
 ├── App.tsx                          # Root entry — navigation + notification listeners
 ├── app.json                         # Expo config
 ├── package.json
@@ -73,7 +87,7 @@ DueMinder/
 ### 1 — Install
 
 ```bash
-cd DueMinder
+cd due_minder
 npm install
 ```
 
@@ -89,12 +103,137 @@ npx expo start
 # w — open in browser (limited notification support)
 ```
 
-### 3 — Run on physical device
+### 3 — Run on physical device (Development)
 
+This mode requires your phone and Mac to be on the **same WiFi network**. The app fetches the JS bundle from Metro running on your Mac.
+
+**Step 1 — Start Metro (keep this terminal running)**
 ```bash
-# Install Expo Go on your phone from the App Store / Play Store
-# Scan the QR code shown in the terminal
 npx expo start
+```
+
+**Step 2 — Open Xcode from the project**
+```bash
+open ios/dueminder.xcworkspace
+```
+
+**Step 3 — In Xcode:** Select your iPhone as the target device → press **Run (▶)**
+
+> The app will stop working if you kill it and relaunch while Metro is not running, or if your phone leaves the WiFi network.
+
+---
+
+### 4 — Run on physical device (Standalone / Release)
+
+Use this when you want the app to work **without your Mac** — no Metro, no WiFi required. The JS bundle is compiled into the app itself.
+
+**Step 1 — Plug in your iPhone via USB**
+
+**Step 2 — Build and install**
+```bash
+npx expo run:ios --configuration Release --device
+```
+
+This takes 5–10 minutes. Once installed, the app runs independently — disconnect from Mac, switch networks, kill and relaunch freely.
+
+---
+
+### Fixing "No bundle URL present" error (iOS)
+
+This error means the app cannot reach the Metro bundler. Follow these steps in order:
+
+**Step 1 — Clear DerivedData (Xcode cache)**
+```bash
+rm -rf ~/Library/Developer/Xcode/DerivedData
+```
+
+**Step 2 — Start Metro**
+```bash
+npx expo start
+```
+
+**Step 3 — Open Xcode**
+```bash
+open ios/dueminder.xcworkspace
+```
+
+**Step 4 — In Xcode:** `Product → Clean Build Folder` (⇧⌘K) → press **Run (▶)**
+
+> Common causes: Mac's IP address changed, directory was renamed, or Xcode was opened before Metro was running.
+
+---
+
+## Android — Running on Physical Device
+
+### Prerequisites
+- Android Studio installed ([download here](https://developer.android.com/studio))
+- USB debugging enabled on your Android phone:
+  - Go to **Settings → About Phone**
+  - Tap **Build Number** 7 times to unlock Developer Options
+  - Go to **Settings → Developer Options** → enable **USB Debugging**
+
+---
+
+### 5 — Run on Android device (Development)
+
+This mode requires your phone and Mac to be on the **same WiFi network**. The app fetches the JS bundle from Metro running on your Mac.
+
+**Step 1 — Plug in your Android phone via USB**
+
+**Step 2 — Verify device is detected**
+```bash
+adb devices
+```
+You should see your device listed. If not, check USB debugging is enabled and try a different cable.
+
+**Step 3 — Start Metro (keep this terminal running)**
+```bash
+npx expo start
+```
+
+**Step 4 — In the Metro terminal, press `a`** to build and launch on your Android device.
+
+Or run directly:
+```bash
+npx expo run:android --device
+```
+
+> The app will stop working if you kill it and relaunch while Metro is not running, or if your phone leaves the WiFi network.
+
+---
+
+### 6 — Run on Android device (Standalone / Release)
+
+Use this when you want the app to work **without your Mac** — no Metro, no WiFi required. The JS bundle is compiled into the APK itself.
+
+**Step 1 — Plug in your Android phone via USB**
+
+**Step 2 — Build and install**
+```bash
+npx expo run:android --variant release --device
+```
+
+This takes 5–10 minutes. Once installed, the app runs independently — disconnect from Mac, switch networks, kill and relaunch freely.
+
+---
+
+### Fixing common Android errors
+
+**"adb: no devices/emulators found"**
+- Make sure USB debugging is enabled (see Prerequisites above)
+- Try a different USB cable (some cables are charge-only)
+- Run `adb kill-server && adb start-server` then replug the phone
+
+**"Could not connect to development server"**
+- Make sure Metro is running (`npx expo start`)
+- Make sure phone and Mac are on the same WiFi
+- Try shaking the phone → **Dev Settings** → **Debug server host** → enter your Mac's IP and port `8081` (e.g. `192.168.1.5:8081`)
+  - Find your Mac's IP: `ipconfig getifaddr en0`
+
+**Build fails with Gradle error**
+```bash
+cd android && ./gradlew clean && cd ..
+npx expo run:android --device
 ```
 
 ---
@@ -108,7 +247,7 @@ npx expo run:android --variant release
 
 ### iOS (requires Apple Developer account)
 ```bash
-npx expo run:ios --configuration Release
+npx expo run:ios --configuration Release --device
 ```
 
 ### EAS Build (recommended for distribution)

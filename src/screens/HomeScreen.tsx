@@ -14,9 +14,9 @@ import { format } from 'date-fns';
 
 import { Colors } from '../constants/colors';
 import { Reminder } from '../types';
-import { loadReminders, deleteReminder } from '../storage/reminderStorage';
-import { cancelReminderNotifications } from '../utils/notifications';
-import { daysUntil } from '../utils/urgency';
+import { loadReminders, deleteReminder, updateReminder } from '../storage/reminderStorage';
+import { cancelReminderNotifications, scheduleReminderNotifications } from '../utils/notifications';
+import { daysUntil, nextDueDate } from '../utils/urgency';
 import { CATEGORY_MAP } from '../constants/categories';
 import ReminderCard from '../components/ReminderCard';
 
@@ -51,6 +51,20 @@ export default function HomeScreen() {
     navigation.navigate('Add', { reminder });
   };
 
+  const handleMarkPaid = async (reminder: Reminder) => {
+    if (reminder.repeat === 'once') {
+      await cancelReminderNotifications(reminder.notificationIds);
+      await deleteReminder(reminder.id);
+    } else {
+      const newDueDate = nextDueDate(reminder.dueDate, reminder.repeat);
+      await cancelReminderNotifications(reminder.notificationIds);
+      const advanced = { ...reminder, dueDate: newDueDate };
+      const newIds = await scheduleReminderNotifications(advanced);
+      await updateReminder({ ...advanced, notificationIds: newIds });
+    }
+    load();
+  };
+
   const categoryBreakdown = (() => {
     const counts: Record<string, number> = {};
     reminders.forEach(r => { counts[r.category] = (counts[r.category] ?? 0) + 1; });
@@ -63,6 +77,7 @@ export default function HomeScreen() {
   const thisWeek = reminders.filter(r => { const d = daysUntil(r.dueDate); return d > 3 && d <= 7; }).length;
   const upcoming = reminders.filter(r => daysUntil(r.dueDate) > 7).length;
   const next     = reminders[0];
+  const upcomingReminders = reminders.filter(r => daysUntil(r.dueDate) <= 30);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -158,14 +173,19 @@ export default function HomeScreen() {
 
         {reminders.length === 0 ? (
           <EmptyState onAdd={() => navigation.navigate('Add')} />
+        ) : upcomingReminders.length === 0 ? (
+          <View style={styles.noUpcoming}>
+            <Text style={styles.noUpcomingText}>No reminders due in the next 30 days</Text>
+          </View>
         ) : (
-          reminders.slice(0, 5).map(r => (
+          upcomingReminders.map(r => (
             <ReminderCard
               key={r.id}
               reminder={r}
               onPress={() => navigation.navigate('Reminders')}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onMarkPaid={handleMarkPaid}
             />
           ))
         )}
@@ -237,6 +257,9 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   sectionTitle:  { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
   seeAll:        { fontSize: 12, color: Colors.blue },
+
+  noUpcoming:     { paddingVertical: 20, alignItems: 'center' },
+  noUpcomingText: { fontSize: 13, color: Colors.textMuted },
 
   empty:       { alignItems: 'center', paddingVertical: 40, gap: 8 },
   emptyTitle:  { fontSize: 16, fontWeight: '600', color: Colors.textSecondary },
